@@ -1,5 +1,13 @@
 import { relations } from "drizzle-orm";
-import { pgTable, text, timestamp, boolean, index } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, index, pgEnum, real, AnyPgColumn } from "drizzle-orm/pg-core";
+
+const commonColumns = {
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => /* @__PURE__ */ new Date())
+    .notNull(),
+}
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -73,9 +81,37 @@ export const verification = pgTable(
   (table) => [index("verification_identifier_idx").on(table.identifier)],
 );
 
+export const units = pgTable("units", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  ...commonColumns,
+});
+
+export const rolesEnum = pgEnum("goal_types", ["target", "manual", "goals"]);
+
+export const goals = pgTable("goals", {
+  id: text("id").primaryKey(),
+  parentGoalId: text("parent_goal_id").references((): AnyPgColumn => goals.id),
+  userId: text("user_id").references(() => user.id),
+  unit_id: text("unit_id").references(() => units.id),
+  goal_type: rolesEnum("goal_type").notNull(),
+  target: real("target"),
+  description: text("description"),
+  completed_at: timestamp("completed_at"),
+  ...commonColumns,
+})
+
+export const goalProgress = pgTable("goal_progress", {
+  id: text("id").primaryKey(),
+  goalId: text("goal_id").references(() => goals.id),
+  progress: real("progress"),
+  ...commonColumns,
+});
+
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
+  goals: many(goals),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -89,5 +125,32 @@ export const accountRelations = relations(account, ({ one }) => ({
   user: one(user, {
     fields: [account.userId],
     references: [user.id],
+  }),
+}));
+
+export const unitRelations = relations(units, ({ many }) => ({
+  goals: many(goals),
+}));
+
+export const goalRelations = relations(goals, ({ one, many }) => ({
+  units: one(units, {
+    fields: [goals.unit_id],
+    references: [units.id],
+  }),
+  users: one(user, {
+    fields: [goals.userId],
+    references: [user.id],
+  }),
+  goalProgress: many(goalProgress),
+  parentGoal: one(goals, {
+    fields: [goals.parentGoalId],
+    references: [goals.id],
+  }),
+}));
+
+export const goalProgressRelations = relations(goalProgress, ({ one }) => ({
+  goal: one(goals, {
+    fields: [goalProgress.goalId],
+    references: [goals.id],
   }),
 }));
