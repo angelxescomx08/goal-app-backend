@@ -94,6 +94,7 @@ export const goals = pgTable("goals", {
   parentGoalId: text("parent_goal_id").references((): AnyPgColumn => goals.id),
   userId: text("user_id").references(() => user.id),
   unit_id: text("unit_id").references(() => units.id),
+  title: text("title").notNull(),
   goal_type: rolesEnum("goal_type").notNull(),
   target: real("target"),
   description: text("description"),
