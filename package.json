@@ -5,10 +5,11 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "bun run --watch src/index.ts",
     "generate": "drizzle-kit generate",
-		"migrate": "drizzle-kit migrate",
-		"push": "drizzle-kit push"
+    "migrate": "drizzle-kit migrate",
+    "push": "drizzle-kit push"
   },
   "dependencies": {
+    "@elysiajs/cors": "^1.4.1",
     "better-auth": "^1.4.9",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.45.1",

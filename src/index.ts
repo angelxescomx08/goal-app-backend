@@ -1,5 +1,6 @@
 import { Elysia, Context } from "elysia";
 import { auth } from "./lib/auth";
+import { cors } from '@elysiajs/cors'
 
 const betterAuthView = (context: Context) => {
   const BETTER_AUTH_ACCEPT_METHODS = ["POST", "GET"]
@@ -11,7 +12,9 @@ const betterAuthView = (context: Context) => {
   }
 }
 
-const app = new Elysia().all("/api/auth/*", betterAuthView).listen(3000);
+const app = new Elysia().use(cors({
+  origin: ['http://localhost:1420'],
+})).all("/api/auth/*", betterAuthView).listen(3000);
 
 console.log(
   `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`
