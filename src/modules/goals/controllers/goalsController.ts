@@ -1,6 +1,6 @@
 import { Session } from "../../../lib/auth";
 import { db } from "../../../db/db";
-import { goals, session } from '../../../db/schema';
+import { goals } from '../../../db/schema';
 import { eq } from "drizzle-orm";
 import { CreateGoalSchema } from "../schemas/goalSchema";
 import { Context, } from "elysia";
@@ -19,7 +19,7 @@ export async function createGoal(context: {
   user: Session["user"],
   status: Context["status"]
 }) {
-  const { body, session, user, status } = context;
+  const { body, user, status } = context;
   try {
     const newGoal = await db.insert(goals).values({
       id: crypto.randomUUID(),
