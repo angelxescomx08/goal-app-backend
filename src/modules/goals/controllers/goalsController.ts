@@ -7,7 +7,6 @@ import { Context, } from "elysia";
 import crypto from "node:crypto";
 
 export async function getGoalsByUser(session: Session) {
-  console.log(session);
   const userGoals = await db.select().from(goals).where(eq(goals.userId, session.user.id));
   return {
     goals: userGoals,
