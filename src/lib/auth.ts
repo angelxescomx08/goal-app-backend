@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "../db/db";
 import * as schema from "../db/schema";
+import Elysia from "elysia";
 
 export const auth = betterAuth({
   trustedOrigins: [
@@ -21,5 +22,22 @@ export const auth = betterAuth({
     schema,
   }),
 });
+
+export const betterAuthMiddleware = new Elysia({ name: "better-auth" })
+  .mount(auth.handler)
+  .macro({
+    auth: {
+      async resolve({ status, request: { headers } }) {
+        const session = await auth.api.getSession({
+          headers,
+        });
+        if (!session) return status(401);
+        return {
+          user: session.user,
+          session: session.session,
+        };
+      },
+    },
+  });
 
 export type Session = typeof auth.$Infer.Session;

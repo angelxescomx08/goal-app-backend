@@ -93,12 +93,12 @@ export const goals = pgTable("goals", {
   id: text("id").primaryKey(),
   parentGoalId: text("parent_goal_id").references((): AnyPgColumn => goals.id),
   userId: text("user_id").references(() => user.id),
-  unit_id: text("unit_id").references(() => units.id),
+  unitId: text("unit_id").references(() => units.id),
   title: text("title").notNull(),
-  goal_type: rolesEnum("goal_type").notNull(),
+  goalType: rolesEnum("goal_type").notNull(),
   target: real("target"),
   description: text("description"),
-  completed_at: timestamp("completed_at"),
+  completedAt: timestamp("completed_at"),
   ...commonColumns,
 })
 
@@ -135,7 +135,7 @@ export const unitRelations = relations(units, ({ many }) => ({
 
 export const goalRelations = relations(goals, ({ one, many }) => ({
   units: one(units, {
-    fields: [goals.unit_id],
+    fields: [goals.unitId],
     references: [units.id],
   }),
   users: one(user, {
