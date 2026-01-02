@@ -7,10 +7,10 @@ import { goalRouter } from "../modules/goals/routes/goalRouter";
 export const app = new Elysia()
   .use(
     cors({
-      origin: '*',
-      methods: '*',
-      allowedHeaders: '*',
-      credentials: false,
+      origin: true, // Allows all origins by setting 'Access-Control-Allow-Origin' to '*'
+      methods: '*', // Allows all HTTP methods: GET, POST, PUT, DELETE, etc.
+      allowedHeaders: ['Content-Type', 'Authorization'], // Common headers often needed
+      credentials: true, // Allows cookies to be sent in cross-origin requests
     })
   )
   .use(betterAuthMiddleware)
