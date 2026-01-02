@@ -16,5 +16,12 @@ export const app = new Elysia()
   .use(betterAuthMiddleware)
   .use(goalRouter)
   .use(unitRouter)
+  .get('/', ({ request }) => {
+    return {
+      origin: request.headers.get('origin'),
+      referer: request.headers.get('referer'),
+    }
+  })
+
 
 export type AppHandler = InlineHandler<typeof app>
