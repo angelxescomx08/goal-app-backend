@@ -4,7 +4,7 @@ import { cors } from '@elysiajs/cors'
 import { unitRouter } from "../modules/units/routes/unitRouter";
 import { goalRouter } from "../modules/goals/routes/goalRouter";
 
-export const app = new Elysia()
+const app = new Elysia()
   .use(
     cors({
       origin: true, // Allows all origins by setting 'Access-Control-Allow-Origin' to '*'
@@ -23,5 +23,5 @@ export const app = new Elysia()
     }
   })
 
-
+export default app;
 export type AppHandler = InlineHandler<typeof app>

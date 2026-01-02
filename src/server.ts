@@ -1,3 +1,3 @@
 import app from "./lib/app";
 
-export default app;
+app.listen(3000);
