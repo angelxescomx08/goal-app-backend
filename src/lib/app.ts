@@ -6,7 +6,12 @@ import { goalRouter } from "../modules/goals/routes/goalRouter";
 
 export const app = new Elysia()
   .use(
-    cors()
+    cors({
+      origin: '*',
+      methods: '*',
+      allowedHeaders: '*',
+      credentials: false,
+    })
   )
   .use(betterAuthMiddleware)
   .use(goalRouter)
