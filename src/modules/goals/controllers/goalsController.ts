@@ -5,12 +5,29 @@ import { eq } from "drizzle-orm";
 import { CreateGoalSchema } from "../schemas/goalSchema";
 import { Context, } from "elysia";
 import crypto from "node:crypto";
+import { Pagination } from "../../../types/pagination";
 
-export async function getGoalsByUser(session: Session) {
-  const userGoals = await db.select().from(goals).where(eq(goals.userId, session.user.id));
-  return {
-    goals: userGoals,
-  };
+export async function getGoalsByUser(context: {
+  session: Session["session"],
+  query: Pagination,
+  status: Context["status"]
+}) {
+  const { session, query, status } = context;
+  const userGoals = await db
+    .select()
+    .from(goals)
+    .where(eq(goals.userId, session.userId))
+    .limit(query.limit + 1)
+    .offset((query.page - 1) * query.limit);
+  const hasMore = userGoals.length > query.limit;
+  const data = userGoals.slice(0, query.limit);
+  return status(200, {
+    data,
+    total: userGoals.length,
+    page: query.page,
+    limit: query.limit,
+    hasMore,
+  });
 }
 
 export async function createGoal(context: {
