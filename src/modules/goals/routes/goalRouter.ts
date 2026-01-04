@@ -1,7 +1,8 @@
 import { betterAuthMiddleware } from "../../../lib/auth";
 import { paginationSchema } from "../../../types/pagination";
-import { createGoal, getGoalsByUser } from "../controllers/goalsController";
+import { createGoal, getGoalById, getGoalsByUser } from "../controllers/goalsController";
 import { createGoalSchema } from "../schemas/goalSchema";
+import { z } from "zod";
 
 export const goalRouter = betterAuthMiddleware
   .group("/goals", (group) =>
@@ -9,6 +10,12 @@ export const goalRouter = betterAuthMiddleware
       .get("/by-user", getGoalsByUser, {
         auth: true,
         query: paginationSchema,
+      })
+      .get("/:id", ({ params, status }) => getGoalById({ id: params.id, status }), {
+        auth: true,
+        params: z.object({
+          id: z.string(),
+        }),
       })
       .post("/",
         ({ session, user, body, status }) => createGoal({ body, session, user, status }), {

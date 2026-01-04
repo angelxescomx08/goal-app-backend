@@ -56,3 +56,19 @@ export async function createGoal(context: {
   }
 
 }
+
+export async function getGoalById(context: {
+  id: string,
+  status: Context["status"]
+}) {
+  const { id, status } = context;
+  const goal = await db.query.goals.findFirst({
+    where: eq(goals.id, id),
+    with: {
+      units: true,
+      goalProgress: true,
+      parentGoal: true,
+    },
+  });
+  return status(200, goal);
+}
