@@ -5,8 +5,8 @@ import * as schema from "../db/schema";
 import Elysia from "elysia";
 
 export const auth = betterAuth({
+  baseURL: process.env.BETTER_AUTH_URL as string,
   trustedOrigins: [
-    'http://localhost:1420',
     'http://localhost:5173',
     'https://goals-app-react.vercel.app'
   ],
