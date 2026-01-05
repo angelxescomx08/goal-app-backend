@@ -10,11 +10,16 @@ export const auth = betterAuth({
     'http://localhost:5173',
     'https://goals-app-react.vercel.app'
   ],
-  cookies: {
-    cookieOptions: {
+  advanced: {
+    // 1. Forzar cookies seguras para HTTPS (Vercel)
+    useSecureCookies: true,
+    // 2. Configuración global de cookies para cross-site
+    defaultCookieAttributes: {
       sameSite: "none",
       secure: true,
-    }
+    },
+    // 3. Si tu versión soporta 'crossOriginCookies' (v1.3+), actívalo:
+    // crossOriginCookies: { enabled: true } 
   },
   emailAndPassword: {
     enabled: true,

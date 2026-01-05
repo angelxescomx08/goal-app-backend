@@ -8,10 +8,10 @@ import { goalProgressRouter } from "./modules/goal-progress/routes/goalProgressR
 export default new Elysia()
   .use(
     cors({
-      origin: ['https://goals-app-react.vercel.app', 'http://localhost:5173'],
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization'],
+      origin: ['https://goals-app-react.vercel.app', 'http://localhost:5173'], // URL exacta sin / al final
       credentials: true,
+      allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     })
   )
   .use(betterAuthMiddleware)
