@@ -6,7 +6,9 @@ import Elysia from "elysia";
 
 export const auth = betterAuth({
   trustedOrigins: [
-    'http://localhost:1420'
+    'http://localhost:1420',
+    'http://localhost:5173',
+    'https://goals-app-react.vercel.app'
   ],
   emailAndPassword: {
     enabled: true,
