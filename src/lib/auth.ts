@@ -10,6 +10,12 @@ export const auth = betterAuth({
     'http://localhost:5173',
     'https://goals-app-react.vercel.app'
   ],
+  cookies: {
+    cookieOptions: {
+      sameSite: "none",
+      secure: true,
+    }
+  },
   emailAndPassword: {
     enabled: true,
   },
