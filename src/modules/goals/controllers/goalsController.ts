@@ -1,12 +1,12 @@
 import { Session } from "../../../lib/auth";
 import { db } from "../../../db/db";
-import { goalProgress, goals } from '../../../db/schema';
+import { goals } from '../../../db/schema';
 import { eq } from "drizzle-orm";
 import { CreateGoalSchema } from "../schemas/goalSchema";
 import { Context, } from "elysia";
 import crypto from "node:crypto";
 import { Pagination } from "../../../types/pagination";
-import { updateParentGoalProgress } from "../utils/updateParentGoalPRogress";
+import { updateParentGoalProgress } from "../utils/updateParentGoalProgress";
 
 export async function getGoalsByUser(context: {
   session: Session["session"],

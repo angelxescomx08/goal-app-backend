@@ -3,7 +3,7 @@ import { CreateGoalProgress } from '../schemas/goalProgressSchema';
 import { db } from '../../../db/db';
 import { goalProgress, goals } from '../../../db/schema';
 import { eq } from 'drizzle-orm';
-import { updateParentGoalProgress } from '../../goals/utils/updateParentGoalPRogress';
+import { updateParentGoalProgress } from '../../goals/utils/updateParentGoalProgress';
 
 export async function createGoalProgress(context: {
   body: CreateGoalProgress,
