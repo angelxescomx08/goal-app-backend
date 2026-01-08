@@ -1,6 +1,6 @@
 import { Session } from "../../../lib/auth";
 import { db } from "../../../db/db";
-import { goals } from '../../../db/schema';
+import { goalProgress, goals } from '../../../db/schema';
 import { eq } from "drizzle-orm";
 import { CreateGoalSchema } from "../schemas/goalSchema";
 import { Context, } from "elysia";
@@ -71,4 +71,41 @@ export async function getGoalById(context: {
     },
   });
   return status(200, goal);
+}
+
+export async function getGoalProgressByGoalId(context: {
+  goalId: string,
+  status: Context["status"]
+}) {
+  const { goalId, status } = context;
+  try {
+    const [goal, progress] = await Promise.all([
+      db.query.goals.findFirst({
+        where: eq(goals.id, goalId),
+      }),
+      db.query.goalProgress.findMany({
+        where: eq(goalProgress.goalId, goalId),
+      })
+    ])
+    if (!goal) {
+      return status(404, { error: "Meta no encontrada" });
+    }
+
+    if (goal.goalType === "target") {
+      const totalProgress = progress.reduce((acc, curr) => acc + (curr.progress ?? 0), 0);
+      return status(200, {
+        progress: goal.target,
+        currentProgress: totalProgress,
+      });
+    }
+
+    if (goal.goalType === "goals") {
+      
+    }
+
+    return status(200, goalProgress);
+  } catch (error) {
+    console.error(error);
+    return status(500, { error: "Falló la obtención del progreso de la meta" });
+  }
 }
