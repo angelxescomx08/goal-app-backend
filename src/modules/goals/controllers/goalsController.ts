@@ -6,6 +6,7 @@ import { CreateGoalSchema } from "../schemas/goalSchema";
 import { Context, } from "elysia";
 import crypto from "node:crypto";
 import { Pagination } from "../../../types/pagination";
+import { updateParentGoalProgress } from "../utils/updateParentGoalPRogress";
 
 export async function getGoalsByUser(context: {
   session: Session["session"],
@@ -38,16 +39,33 @@ export async function createGoal(context: {
 }) {
   const { body, user, status } = context;
   try {
+
+    if (body.parentGoalId) {
+      const parentGoal = await db.query.goals.findFirst({
+        where: eq(goals.id, body.parentGoalId),
+      });
+      if (!parentGoal)
+        return status(404, { error: "Meta padre no encontrada" });
+      if (parentGoal.userId !== user.id)
+        return status(403, { error: "No tienes permisos para crear una meta dentro de esta meta" });
+      if (parentGoal.goalType !== "goals")
+        return status(400, { error: "La meta padre no permite crear metas hijas" });
+    }
+
     const newGoal = await db.insert(goals).values({
       id: crypto.randomUUID(),
       userId: user.id,
       title: body.title,
-      goalType: body.goal_type,
+      goalType: body.goalType,
       description: body.description,
-      parentGoalId: body.parent_goal_id,
-      unitId: body.unit_id,
+      parentGoalId: body.parentGoalId,
+      unitId: body.unitId,
       target: body.target,
     }).returning();
+
+    if (body.parentGoalId) {
+      await updateParentGoalProgress(body.parentGoalId);
+    }
 
     return status(201, { goal: newGoal });
   } catch (error) {
@@ -66,46 +84,8 @@ export async function getGoalById(context: {
     where: eq(goals.id, id),
     with: {
       units: true,
-      goalProgress: true,
       parentGoal: true,
     },
   });
   return status(200, goal);
-}
-
-export async function getGoalProgressByGoalId(context: {
-  goalId: string,
-  status: Context["status"]
-}) {
-  const { goalId, status } = context;
-  try {
-    const [goal, progress] = await Promise.all([
-      db.query.goals.findFirst({
-        where: eq(goals.id, goalId),
-      }),
-      db.query.goalProgress.findMany({
-        where: eq(goalProgress.goalId, goalId),
-      })
-    ])
-    if (!goal) {
-      return status(404, { error: "Meta no encontrada" });
-    }
-
-    if (goal.goalType === "target") {
-      const totalProgress = progress.reduce((acc, curr) => acc + (curr.progress ?? 0), 0);
-      return status(200, {
-        progress: goal.target,
-        currentProgress: totalProgress,
-      });
-    }
-
-    if (goal.goalType === "goals") {
-      
-    }
-
-    return status(200, goalProgress);
-  } catch (error) {
-    console.error(error);
-    return status(500, { error: "Falló la obtención del progreso de la meta" });
-  }
 }

@@ -4,29 +4,30 @@ export const goalTypes = z.enum(["target", "manual", "goals"])
 
 export const goalSchema = z.object({
   id: z.uuid(),
-  parent_goal_id: z.uuid().nullish(),
-  user_id: z.uuid(),
-  unit_id: z.uuid().nullish(),
+  parentGoalId: z.uuid().nullish(),
+  userId: z.uuid(),
+  unitId: z.uuid().nullish(),
   title: z.string().min(1, "Título requerido"),
-  goal_type: goalTypes,
+  goalType: goalTypes,
   target: z.number().nullish(),
+  currentProgress: z.number().nullish(),
   description: z.string().min(1, "Descripción requerida"),
-  completed_at: z.date().nullish(),
-  created_at: z.date(),
-  updated_at: z.date(),
+  completedAt: z.date().nullish(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
 })
 
 export const createGoalSchema = goalSchema.omit({
   id: true,
-  user_id: true,
-  completed_at: true,
-  created_at: true,
-  updated_at: true,
+  userId: true,
+  completedAt: true,
+  createdAt: true,
+  updatedAt: true,
 }).superRefine((data, ctx) => {
-  if (data.goal_type === "target") {
-    if (data.unit_id === null) {
+  if (data.goalType === "target") {
+    if (data.unitId === null) {
       ctx.addIssue({
-        path: ["unit_id"],
+        path: ["unitId"],
         message: "La unidad es requerida cuando el tipo es target",
         code: "custom",
       })

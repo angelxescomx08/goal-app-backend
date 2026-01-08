@@ -38,7 +38,7 @@ export const auth = betterAuth({
 
 export const betterAuthMiddleware = new Elysia({ name: "better-auth" })
   .onBeforeHandle(({ request }) => {
-    console.log("Cookie Header:", request.headers.get("cookie"));
+    //console.log("Cookie Header:", request.headers.get("cookie"));
   })
   .mount(auth.handler)
   .macro({

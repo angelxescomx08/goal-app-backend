@@ -97,6 +97,7 @@ export const goals = pgTable("goals", {
   title: text("title").notNull(),
   goalType: rolesEnum("goal_type").notNull(),
   target: real("target"),
+  currentProgress: real("current_progress"),
   description: text("description"),
   completedAt: timestamp("completed_at"),
   ...commonColumns,
