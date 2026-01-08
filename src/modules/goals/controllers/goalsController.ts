@@ -1,7 +1,7 @@
 import { Session } from "../../../lib/auth";
 import { db } from "../../../db/db";
 import { goals } from '../../../db/schema';
-import { eq } from "drizzle-orm";
+import { and, eq, gte, lte } from "drizzle-orm";
 import { CreateGoalSchema } from "../schemas/goalSchema";
 import { Context, } from "elysia";
 import crypto from "node:crypto";
@@ -88,4 +88,37 @@ export async function getGoalById(context: {
     },
   });
   return status(200, goal);
+}
+
+export async function getStatistics(context: {
+  session: Session["session"],
+  user: Session["user"],
+  query: {
+    startDate: string,
+    endDate: string,
+  },
+  status: Context["status"]
+}) {
+  const { session, user, status, query } = context;
+
+  try {
+    const goalsByUser = await db.query.goals.findMany({
+      where: and(
+        eq(goals.userId, user.id),
+        gte(goals.createdAt, new Date(query.startDate)),
+        lte(goals.createdAt, new Date(query.endDate))),
+    });
+
+    const totalGoals = goalsByUser.length;
+    const totalCompletedGoals = goalsByUser.filter((goal) => goal.completedAt !== null).length;
+
+    return status(200, {
+      totalGoals,
+      totalCompletedGoals,
+      pendingGoals: totalGoals - totalCompletedGoals,
+    });
+  } catch (error) {
+    console.error(error);
+    return status(500, { error: "Falló la obtención de las estadísticas" });
+  }
 }
