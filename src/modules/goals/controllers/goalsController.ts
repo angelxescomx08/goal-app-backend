@@ -149,3 +149,23 @@ export async function toggleGoalCompletion(context: {
     return status(500, { error: "Falló la marca de la meta como completada" });
   }
 }
+
+export async function getGoalsWithTypeGoal(context: {
+  session: Session["session"],
+  user: Session["user"],
+  status: Context["status"]
+}) {
+  const { session, user, status } = context;
+  try {
+    const goalsWithTypeGoal = await db.query.goals.findMany({
+      where: and(
+        eq(goals.userId, user.id),
+        eq(goals.goalType, "goals"),
+      ),
+    });
+    return status(200, goalsWithTypeGoal);
+  } catch (error) {
+    console.error(error);
+    return status(500, { error: "Falló la obtención de las metas con tipo goal" });
+  }
+}
