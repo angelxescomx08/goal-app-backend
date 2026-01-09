@@ -10,14 +10,21 @@ import { updateParentGoalProgress } from "../utils/updateParentGoalProgress";
 
 export async function getGoalsByUser(context: {
   session: Session["session"],
-  query: Pagination,
+  query: Pagination & {
+    startDate: string;
+    endDate: string;
+  },
   status: Context["status"]
 }) {
   const { session, query, status } = context;
   const userGoals = await db
     .select()
     .from(goals)
-    .where(eq(goals.userId, session.userId))
+    .where(and(
+      eq(goals.userId, session.userId),
+      gte(goals.createdAt, new Date(query.startDate)),
+      lte(goals.createdAt, new Date(query.endDate)),
+    ))
     .limit(query.limit + 1)
     .offset((query.page - 1) * query.limit);
   const hasMore = userGoals.length > query.limit;

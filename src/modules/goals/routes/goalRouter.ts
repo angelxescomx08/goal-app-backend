@@ -9,7 +9,10 @@ export const goalRouter = betterAuthMiddleware
     group
       .get("/by-user", getGoalsByUser, {
         auth: true,
-        query: paginationSchema,
+        query: paginationSchema.extend({
+          startDate: z.string(),
+          endDate: z.string(),
+        }),
       })
       .get("/:id", ({ params, status }) => getGoalById({ id: params.id, status }), {
         auth: true,
