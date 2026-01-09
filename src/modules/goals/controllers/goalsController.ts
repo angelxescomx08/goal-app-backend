@@ -122,3 +122,30 @@ export async function getStatistics(context: {
     return status(500, { error: "Falló la obtención de las estadísticas" });
   }
 }
+
+export async function toggleGoalCompletion(context: {
+  id: string,
+  status: Context["status"]
+}) {
+  const { id, status } = context;
+  try {
+    const goal = await db.query.goals.findFirst({
+      where: eq(goals.id, id),
+    });
+    if (!goal) return status(404, { error: "Meta no encontrada" });
+    if (goal.goalType !== "manual")
+      return status(400, { error: "No se puede marcar como completada una meta que no sea manual" });
+    if (goal.completedAt) {
+      await db.update(goals).set({ completedAt: null }).where(eq(goals.id, id));
+    } else {
+      await db.update(goals).set({ completedAt: new Date() }).where(eq(goals.id, id));
+    }
+    if (goal.parentGoalId) {
+      await updateParentGoalProgress(goal.parentGoalId);
+    }
+    return status(200, { message: "Meta marcada como completada" });
+  } catch (error) {
+    console.error(error);
+    return status(500, { error: "Falló la marca de la meta como completada" });
+  }
+}
