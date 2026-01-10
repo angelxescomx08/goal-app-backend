@@ -29,6 +29,13 @@
       "when": 1768013961352,
       "tag": "0003_slimy_longshot",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1768067946713,
+      "tag": "0004_crazy_magus",
+      "breakpoints": true
     }
   ]
 }
