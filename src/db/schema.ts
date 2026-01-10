@@ -91,9 +91,9 @@ export const rolesEnum = pgEnum("goal_types", ["target", "manual", "goals"]);
 
 export const goals = pgTable("goals", {
   id: text("id").primaryKey(),
-  parentGoalId: text("parent_goal_id").references((): AnyPgColumn => goals.id),
-  userId: text("user_id").references(() => user.id),
-  unitId: text("unit_id").references(() => units.id),
+  parentGoalId: text("parent_goal_id").references((): AnyPgColumn => goals.id, { onDelete: "cascade" }),
+  userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+  unitId: text("unit_id").references(() => units.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
   goalType: rolesEnum("goal_type").notNull(),
   target: real("target"),
@@ -105,7 +105,7 @@ export const goals = pgTable("goals", {
 
 export const goalProgress = pgTable("goal_progress", {
   id: text("id").primaryKey(),
-  goalId: text("goal_id").references(() => goals.id),
+  goalId: text("goal_id").references(() => goals.id, { onDelete: "cascade" }),
   progress: real("progress"),
   ...commonColumns,
 });
