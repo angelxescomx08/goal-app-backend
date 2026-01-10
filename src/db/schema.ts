@@ -91,9 +91,10 @@ export const rolesEnum = pgEnum("goal_types", ["target", "manual", "goals"]);
 
 export const goals = pgTable("goals", {
   id: text("id").primaryKey(),
-  parentGoalId: text("parent_goal_id").references((): AnyPgColumn => goals.id, { onDelete: "cascade" }),
+  parentGoalId: text("parent_goal_id")
+    .references((): AnyPgColumn => goals.id, { onDelete: "cascade" }),
   userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
-  unitId: text("unit_id").references(() => units.id, { onDelete: "cascade" }),
+  unitId: text("unit_id").references(() => units.id, { onDelete: "restrict" }),
   title: text("title").notNull(),
   goalType: rolesEnum("goal_type").notNull(),
   target: real("target"),
