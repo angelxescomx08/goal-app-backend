@@ -1,12 +1,13 @@
 import { Session } from "../../../lib/auth";
 import { db } from "../../../db/db";
-import { goals } from '../../../db/schema';
+import { goalProgress, goals } from '../../../db/schema';
 import { and, eq, gte, lte } from "drizzle-orm";
 import { CreateGoalSchema } from "../schemas/goalSchema";
 import { Context, } from "elysia";
 import crypto from "node:crypto";
 import { Pagination } from "../../../types/pagination";
 import { updateParentGoalProgress } from "../utils/updateParentGoalProgress";
+import dayjs from "dayjs";
 
 export async function getGoalsByUser(context: {
   session: Session["session"],
@@ -53,8 +54,6 @@ export async function createGoal(context: {
       });
       if (!parentGoal)
         return status(404, { error: "Meta padre no encontrada" });
-      if (parentGoal.userId !== user.id)
-        return status(403, { error: "No tienes permisos para crear una meta dentro de esta meta" });
       if (parentGoal.goalType !== "goals")
         return status(400, { error: "La meta padre no permite crear metas hijas" });
     }
@@ -198,5 +197,52 @@ export async function deleteGoal(context: {
   } catch (error) {
     console.error(error);
     return status(500, { error: "Falló la eliminación de la meta" });
+  }
+}
+
+export async function goalStatistics(context: {
+  id: string,
+  user: Session["user"],
+  status: Context["status"]
+}) {
+  const { id, status, user } = context;
+  try {
+    const goal = await db.query.goals.findFirst({
+      where: eq(goals.id, id),
+    });
+    if (!goal) return status(404, { error: "Meta no encontrada" });
+    let historicalData: { date: string, progress: number }[] = [];
+
+    if (goal.goalType === "target") {
+      const goalProgressRecords = await db.query.goalProgress.findMany({
+        where: eq(goalProgress.goalId, goal.id),
+      });
+
+      const dates = new Map<string, number>();
+
+      for (const record of goalProgressRecords) {
+        const date = dayjs(record.createdAt).format("YYYY-MM-DD");
+        if (!dates.has(date)) {
+          dates.set(date, record.progress ?? 0);
+        } else {
+          const prev = dates.get(date) ?? 0;
+          const inc = record.progress ?? 0;
+          dates.set(date, prev + inc);
+        }
+      }
+      for (const [date, progress] of dates.entries()) {
+        historicalData.push({
+          date,
+          progress,
+        });
+      }
+    }
+
+    return status(200, {
+      historicalData,
+    });
+  } catch (error) {
+    console.error(error);
+    return status(500, { error: "Falló la obtención de las estadísticas de la meta" });
   }
 }

@@ -17,6 +17,7 @@ export async function updateParentGoalProgress(parentGoalId: string) {
   await db.update(goals).set({
     currentProgress: currentProgress,
     completedAt: completed,
+    target: childGoals.length,
   }).where(eq(goals.id, parentGoalId));
 
   if (completed) {

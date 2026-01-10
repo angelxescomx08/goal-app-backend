@@ -1,6 +1,6 @@
 import { betterAuthMiddleware } from "../../../lib/auth";
 import { paginationSchema } from "../../../types/pagination";
-import { createGoal, deleteGoal, getGoalById, getGoalsByUser, getGoalsWithTypeGoal, getStatistics, toggleGoalCompletion } from "../controllers/goalsController";
+import { createGoal, deleteGoal, getGoalById, getGoalsByUser, getGoalsWithTypeGoal, getStatistics, goalStatistics, toggleGoalCompletion } from "../controllers/goalsController";
 import { createGoalSchema } from "../schemas/goalSchema";
 import { z } from "zod";
 
@@ -46,6 +46,13 @@ export const goalRouter = betterAuthMiddleware
         auth: true,
       })
       .delete("/:id", ({ params, status }) => deleteGoal({ id: params.id, status }), {
+        auth: true,
+        params: z.object({
+          id: z.string(),
+        }),
+      })
+      .get("/statistics/:id",
+        ({ params, status, user }) => goalStatistics({ id: params.id, status, user }), {
         auth: true,
         params: z.object({
           id: z.string(),
