@@ -162,7 +162,7 @@ export async function getGoalsWithTypeGoal(context: {
   user: Session["user"],
   status: Context["status"]
 }) {
-  const { session, user, status } = context;
+  const { user, status } = context;
   try {
     const goalsWithTypeGoal = await db.query.goals.findMany({
       where: and(
@@ -174,5 +174,29 @@ export async function getGoalsWithTypeGoal(context: {
   } catch (error) {
     console.error(error);
     return status(500, { error: "Falló la obtención de las metas con tipo goal" });
+  }
+}
+
+export async function deleteGoal(context: {
+  id: string,
+  status: Context["status"]
+}) {
+  const { id, status } = context;
+  try {
+    const goal = await db.query.goals.findFirst({
+      where: eq(goals.id, id),
+    });
+    if (!goal) return status(404, { error: "Meta no encontrada" });
+
+    const deletedGoal = await db.delete(goals).where(eq(goals.id, id));
+
+    if (goal.parentGoalId) {
+      await updateParentGoalProgress(goal.parentGoalId);
+    }
+
+    return status(200, { message: "Meta eliminada", goal: deletedGoal });
+  } catch (error) {
+    console.error(error);
+    return status(500, { error: "Falló la eliminación de la meta" });
   }
 }
