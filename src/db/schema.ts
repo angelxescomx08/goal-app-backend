@@ -111,6 +111,14 @@ export const goalProgress = pgTable("goal_progress", {
   ...commonColumns,
 });
 
+export const userStats = pgTable("user_stats", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+  unitId: text("unit_id").references(() => units.id, { onDelete: "cascade" }),
+  value: real("value").notNull(),
+  ...commonColumns,
+});
+
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
@@ -155,5 +163,16 @@ export const goalProgressRelations = relations(goalProgress, ({ one }) => ({
   goal: one(goals, {
     fields: [goalProgress.goalId],
     references: [goals.id],
+  }),
+}));
+
+export const userStatsRelations = relations(userStats, ({ one }) => ({
+  user: one(user, {
+    fields: [userStats.userId],
+    references: [user.id],
+  }),
+  unit: one(units, {
+    fields: [userStats.unitId],
+    references: [units.id],
   }),
 }));
