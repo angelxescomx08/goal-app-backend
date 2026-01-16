@@ -2,6 +2,7 @@ import { betterAuthMiddleware } from "../../../lib/auth";
 import { paginationSchema } from "../../../types/pagination";
 import { createGoal, deleteGoal, getGoalById, getGoalsByUser, getGoalsWithTypeGoal, getStatistics, goalStatistics, toggleGoalCompletion } from "../controllers/goalsController";
 import { createGoalSchema } from "../schemas/goalSchema";
+import { utcDateStringSchema } from "../../../lib/dateSchemas";
 import { z } from "zod";
 
 export const goalRouter = betterAuthMiddleware
@@ -10,8 +11,10 @@ export const goalRouter = betterAuthMiddleware
       .get("/by-user", getGoalsByUser, {
         auth: true,
         query: paginationSchema.extend({
-          startDate: z.string(),
-          endDate: z.string(),
+          // Fechas YA convertidas a UTC en formato ISO 8601 UTC
+          // El backend las usa directamente sin conversiones
+          startDate: utcDateStringSchema,
+          endDate: utcDateStringSchema,
         }),
       })
       .get("/:id", ({ params, status }) => getGoalById({ id: params.id, status }), {
@@ -29,8 +32,10 @@ export const goalRouter = betterAuthMiddleware
         getStatistics({ session, user, status, query }), {
         auth: true,
         query: z.object({
-          startDate: z.string(),
-          endDate: z.string(),
+          // Fechas YA convertidas a UTC en formato ISO 8601 UTC
+          // El backend las usa directamente sin conversiones
+          startDate: utcDateStringSchema,
+          endDate: utcDateStringSchema,
         }),
       })
       .put(

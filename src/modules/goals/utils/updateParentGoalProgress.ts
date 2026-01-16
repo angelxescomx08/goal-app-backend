@@ -1,7 +1,12 @@
 import { eq } from "drizzle-orm";
 import { db } from "../../../db/db";
 import { goals } from "../../../db/schema";
+import { nowUTC } from "../../../lib/dateUtils";
 
+/**
+ * IMPORTANTE: Todas las fechas se manejan en UTC
+ * - completedAt se crea usando nowUTC() para garantizar UTC
+ */
 export async function updateParentGoalProgress(parentGoalId: string) {
   const childGoals = await db.query.goals.findMany({
     where: eq(goals.parentGoalId, parentGoalId),
@@ -11,7 +16,8 @@ export async function updateParentGoalProgress(parentGoalId: string) {
   const currentProgress = completedChildGoals.length / childGoals.length;
   let completed = null;
   if (currentProgress >= 1) {
-    completed = new Date();
+    // IMPORTANTE: Usar nowUTC() para obtener fecha actual en UTC
+    completed = nowUTC();
   }
 
   await db.update(goals).set({

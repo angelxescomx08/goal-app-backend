@@ -1,11 +1,27 @@
 import { relations } from "drizzle-orm";
 import { pgTable, text, timestamp, boolean, index, pgEnum, real, AnyPgColumn } from "drizzle-orm/pg-core";
 
+/**
+ * IMPORTANTE: Todas las fechas se manejan en UTC
+ * - El backend siempre envía y recibe fechas en UTC
+ * - Las columnas timestamp en PostgreSQL deben ser TIMESTAMPTZ
+ * - Se recomienda ejecutar una migración para convertir todas las columnas timestamp a timestamptz
+ * 
+ * Nota: Drizzle usa timestamp() que puede mapear a TIMESTAMP o TIMESTAMPTZ.
+ * Para asegurar TIMESTAMPTZ, ejecutar migración manual:
+ * ALTER TABLE table_name ALTER COLUMN column_name TYPE timestamptz;
+ */
+
+/**
+ * Helper para created_at y updated_at
+ * IMPORTANTE: Siempre usar new Date() que retorna UTC
+ * updated_at se actualiza automáticamente con $onUpdate
+ */
 const commonColumns = {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()
-    .$onUpdate(() => /* @__PURE__ */ new Date())
+    .$onUpdate(() => /* @__PURE__ */ new Date()) // new Date() siempre retorna UTC
     .notNull(),
 }
 

@@ -4,7 +4,13 @@ import { db } from '../../../db/db';
 import { goalProgress, goals } from '../../../db/schema';
 import { eq } from 'drizzle-orm';
 import { updateParentGoalProgress } from '../../goals/utils/updateParentGoalProgress';
+import { nowUTC } from '../../../lib/dateUtils';
+import crypto from 'node:crypto';
 
+/**
+ * IMPORTANTE: Todas las fechas se manejan en UTC
+ * - completedAt se crea usando nowUTC() para garantizar UTC
+ */
 export async function createGoalProgress(context: {
   body: CreateGoalProgress,
   status: Context["status"]
@@ -29,7 +35,8 @@ export async function createGoalProgress(context: {
       const newProgress = (goal.currentProgress ?? 0) + (body.progress ?? 0)
       let completed = null;
       if (newProgress >= (goal.target ?? 0)) {
-        completed = new Date();
+        // IMPORTANTE: Usar nowUTC() para obtener fecha actual en UTC
+        completed = nowUTC();
       }
       await db.update(goals).set({
         currentProgress: newProgress,

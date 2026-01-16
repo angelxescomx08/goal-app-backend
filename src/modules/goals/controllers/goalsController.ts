@@ -7,24 +7,34 @@ import { Context, } from "elysia";
 import crypto from "node:crypto";
 import { Pagination } from "../../../types/pagination";
 import { updateParentGoalProgress } from "../utils/updateParentGoalProgress";
-import dayjs from "dayjs";
+import { formatUTCToDay, nowUTC } from "../../../lib/dateUtils";
 
+/**
+ * CONTRATO DE FECHAS:
+ * - El frontend envía fechas YA convertidas a UTC en formato ISO 8601 UTC
+ * - startDate y endDate son Date objects parseados desde ISO 8601 UTC
+ * - Se usan DIRECTAMENTE en consultas sin conversiones
+ * - No se hacen ajustes ni reinterpretaciones
+ */
 export async function getGoalsByUser(context: {
   session: Session["session"],
   query: Pagination & {
-    startDate: string;
-    endDate: string;
+    startDate: Date; // ISO 8601 UTC parseado
+    endDate: Date;   // ISO 8601 UTC parseado
   },
   status: Context["status"]
 }) {
   const { session, query, status } = context;
+
+  // Usar fechas directamente sin conversiones
+  // El frontend ya las envió en UTC correcto
   const userGoals = await db
     .select()
     .from(goals)
     .where(and(
       eq(goals.userId, session.userId),
-      gte(goals.createdAt, new Date(query.startDate)),
-      lte(goals.createdAt, new Date(query.endDate)),
+      gte(goals.createdAt, query.startDate), // UTC directo
+      lte(goals.createdAt, query.endDate),   // UTC directo
     ))
     .limit(query.limit + 1)
     .offset((query.page - 1) * query.limit);
@@ -96,23 +106,32 @@ export async function getGoalById(context: {
   return status(200, goal);
 }
 
+/**
+ * CONTRATO DE FECHAS:
+ * - El frontend envía fechas YA convertidas a UTC en formato ISO 8601 UTC
+ * - startDate y endDate son Date objects parseados desde ISO 8601 UTC
+ * - Se usan DIRECTAMENTE en consultas sin conversiones
+ * - No se hacen ajustes ni reinterpretaciones
+ */
 export async function getStatistics(context: {
   session: Session["session"],
   user: Session["user"],
   query: {
-    startDate: string,
-    endDate: string,
+    startDate: Date, // ISO 8601 UTC parseado
+    endDate: Date,   // ISO 8601 UTC parseado
   },
   status: Context["status"]
 }) {
   const { session, user, status, query } = context;
 
   try {
+    // Usar fechas directamente sin conversiones
+    // El frontend ya las envió en UTC correcto
     const goalsByUser = await db.query.goals.findMany({
       where: and(
         eq(goals.userId, user.id),
-        gte(goals.createdAt, new Date(query.startDate)),
-        lte(goals.createdAt, new Date(query.endDate))),
+        gte(goals.createdAt, query.startDate), // UTC directo
+        lte(goals.createdAt, query.endDate)),  // UTC directo
     });
 
     const totalGoals = goalsByUser.length;
@@ -144,7 +163,8 @@ export async function toggleGoalCompletion(context: {
     if (goal.completedAt) {
       await db.update(goals).set({ completedAt: null }).where(eq(goals.id, id));
     } else {
-      await db.update(goals).set({ completedAt: new Date() }).where(eq(goals.id, id));
+      // IMPORTANTE: Usar nowUTC() para obtener fecha actual en UTC
+      await db.update(goals).set({ completedAt: nowUTC() }).where(eq(goals.id, id));
     }
     if (goal.parentGoalId) {
       await updateParentGoalProgress(goal.parentGoalId);
@@ -220,8 +240,10 @@ export async function goalStatistics(context: {
 
       const dates = new Map<string, number>();
 
+      // IMPORTANTE: Usar dayjs.utc() para formatear fechas en UTC
+      // Esto asegura que el día se extraiga correctamente sin considerar zona local
       for (const record of goalProgressRecords) {
-        const date = dayjs(record.createdAt).format("YYYY-MM-DD");
+        const date = formatUTCToDay(record.createdAt); // Formatea en UTC
         if (!dates.has(date)) {
           dates.set(date, record.progress ?? 0);
         } else {
