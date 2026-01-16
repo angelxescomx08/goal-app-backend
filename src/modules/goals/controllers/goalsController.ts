@@ -2,7 +2,7 @@ import { Session } from "../../../lib/auth";
 import { db } from "../../../db/db";
 import { goalProgress, goals } from '../../../db/schema';
 import { and, eq, gte, lte } from "drizzle-orm";
-import { CreateGoalSchema } from "../schemas/goalSchema";
+import { CreateGoalSchema, goalTypes } from '../schemas/goalSchema';
 import { Context, } from "elysia";
 import crypto from "node:crypto";
 import { Pagination } from "../../../types/pagination";
@@ -103,6 +103,14 @@ export async function getGoalById(context: {
       parentGoal: true,
     },
   });
+  if (goal?.goalType === "goals") {
+    return status(200, {
+      ...goal,
+      children: await db.query.goals.findMany({
+        where: eq(goals.parentGoalId, goal.id),
+      }),
+    });
+  }
   return status(200, goal);
 }
 
