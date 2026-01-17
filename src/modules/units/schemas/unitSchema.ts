@@ -3,6 +3,8 @@ import { z } from "zod"
 export const unitSchema = z.object({
   id: z.uuid(),
   name: z.string().min(1, "Nombre requerido"),
+  pluralName: z.string().min(1, "Nombre plural requerido"),
+  completedWord: z.string().min(1, "Palabra completada requerida"),
   created_at: z.date(),
   updated_at: z.date(),
 })

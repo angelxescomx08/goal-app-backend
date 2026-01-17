@@ -23,6 +23,8 @@ export async function createUnit(context: {
     const newUnit = await db.insert(units).values({
       id: crypto.randomUUID(),
       name: body.name,
+      pluralName: body.pluralName,
+      completedWord: body.completedWord,
     }).returning();
     return status(201, { unit: newUnit });
   } catch (error) {

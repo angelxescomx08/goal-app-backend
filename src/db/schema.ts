@@ -100,6 +100,8 @@ export const verification = pgTable(
 export const units = pgTable("units", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
+  pluralName: text("plural_name"),
+  completedWord: text("completed_word"),
   ...commonColumns,
 });
 
