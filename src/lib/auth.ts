@@ -1,4 +1,4 @@
-import { betterAuth } from "better-auth";
+import { betterAuth } from "better-auth/minimal";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "../db/db";
 import * as schema from "../db/schema";
@@ -10,6 +10,12 @@ export const auth = betterAuth({
     'http://localhost:5173',
     'https://goals-app-react.vercel.app'
   ],
+  session: {
+    cookieCache: {
+      enabled: true,
+      maxAge: 5 * 60, // 5 minutos — reduce consultas getSession/useSession a la DB
+    },
+  },
   advanced: {
     // 1. Forzar cookies seguras para HTTPS (Vercel)
     useSecureCookies: true,
