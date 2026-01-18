@@ -57,6 +57,13 @@
       "when": 1768689984809,
       "tag": "0007_absurd_leader",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1768713681118,
+      "tag": "0008_adorable_vermin",
+      "breakpoints": true
     }
   ]
 }

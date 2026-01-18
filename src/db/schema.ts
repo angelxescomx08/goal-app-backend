@@ -107,37 +107,54 @@ export const units = pgTable("units", {
 
 export const rolesEnum = pgEnum("goal_types", ["target", "manual", "goals"]);
 
-export const goals = pgTable("goals", {
-  id: text("id").primaryKey(),
-  parentGoalId: text("parent_goal_id")
-    .references((): AnyPgColumn => goals.id, { onDelete: "cascade" }),
-  userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
-  unitId: text("unit_id").references(() => units.id, { onDelete: "restrict" }),
-  unitIdCompleted: text("unit_id_completed").references(() => units.id, { onDelete: "restrict" }),
-  unitCompletedAmount: real("unit_completed_amount"),
-  title: text("title").notNull(),
-  goalType: rolesEnum("goal_type").notNull(),
-  target: real("target"),
-  currentProgress: real("current_progress"),
-  description: text("description"),
-  completedAt: timestamp("completed_at"),
-  ...commonColumns,
-})
+export const goals = pgTable(
+  "goals",
+  {
+    id: text("id").primaryKey(),
+    parentGoalId: text("parent_goal_id")
+      .references((): AnyPgColumn => goals.id, { onDelete: "cascade" }),
+    userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+    unitId: text("unit_id").references(() => units.id, { onDelete: "restrict" }),
+    unitIdCompleted: text("unit_id_completed").references(() => units.id, { onDelete: "restrict" }),
+    unitCompletedAmount: real("unit_completed_amount"),
+    title: text("title").notNull(),
+    goalType: rolesEnum("goal_type").notNull(),
+    target: real("target"),
+    currentProgress: real("current_progress"),
+    description: text("description"),
+    completedAt: timestamp("completed_at"),
+    ...commonColumns,
+  },
+  (table) => [
+    index("idx_goals_user_id_created_at").on(table.userId, table.createdAt),
+    index("idx_goals_user_id_goal_type").on(table.userId, table.goalType),
+    index("idx_goals_parent_goal_id").on(table.parentGoalId),
+    index("idx_goals_unit_id").on(table.unitId),
+  ],
+)
 
-export const goalProgress = pgTable("goal_progress", {
-  id: text("id").primaryKey(),
-  goalId: text("goal_id").references(() => goals.id, { onDelete: "cascade" }),
-  progress: real("progress"),
-  ...commonColumns,
-});
+export const goalProgress = pgTable(
+  "goal_progress",
+  {
+    id: text("id").primaryKey(),
+    goalId: text("goal_id").references(() => goals.id, { onDelete: "cascade" }),
+    progress: real("progress"),
+    ...commonColumns,
+  },
+  (table) => [index("idx_goal_progress_goal_id_created_at").on(table.goalId, table.createdAt)],
+);
 
-export const userStats = pgTable("user_stats", {
-  id: text("id").primaryKey(),
-  userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
-  unitId: text("unit_id").references(() => units.id, { onDelete: "cascade" }),
-  value: real("value").notNull(),
-  ...commonColumns,
-});
+export const userStats = pgTable(
+  "user_stats",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+    unitId: text("unit_id").references(() => units.id, { onDelete: "cascade" }),
+    value: real("value").notNull(),
+    ...commonColumns,
+  },
+  (table) => [index("idx_user_stats_user_id_created_at").on(table.userId, table.createdAt)],
+);
 
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
