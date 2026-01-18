@@ -42,7 +42,13 @@ export async function createGoalProgress(context: {
         currentProgress: newProgress,
         completedAt: completed,
       }).where(eq(goals.id, body.goalId));
-      if (goal.unitIdCompleted && goal.unitCompletedAmount) {
+      await db.insert(userStats).values({
+        id: crypto.randomUUID(),
+        userId: goal.userId,
+        unitId: goal.unitId,
+        value: body.progress ?? 0,
+      });
+      if (completed && goal.unitIdCompleted && goal.unitCompletedAmount) {
         await db.insert(userStats).values({
           id: crypto.randomUUID(),
           userId: goal.userId,

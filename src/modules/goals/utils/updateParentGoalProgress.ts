@@ -30,7 +30,9 @@ export async function updateParentGoalProgress(parentGoalId: string) {
     const parentGoal = await db.query.goals.findFirst({
       where: eq(goals.id, parentGoalId),
     });
-    if (parentGoal && updatedParentGoal.unitIdCompleted && updatedParentGoal.unitCompletedAmount) {
+    if (
+      updatedParentGoal && updatedParentGoal.unitIdCompleted && updatedParentGoal.unitCompletedAmount
+    ) {
       await db.insert(userStats).values({
         id: crypto.randomUUID(),
         userId: updatedParentGoal.userId,
