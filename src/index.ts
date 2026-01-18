@@ -4,6 +4,7 @@ import { betterAuthMiddleware } from "./lib/auth";
 import { goalRouter } from "./modules/goals/routes/goalRouter";
 import { unitRouter } from "./modules/units/routes/unitRouter";
 import { goalProgressRouter } from "./modules/goal-progress/routes/goalProgressRouter";
+import { userStatsRouter } from "./modules/user-stats/routes/userStatsRouter";
 
 export default new Elysia()
   .use(
@@ -18,6 +19,7 @@ export default new Elysia()
   .use(goalRouter)
   .use(unitRouter)
   .use(goalProgressRouter)
+  .use(userStatsRouter)
   .get('/', ({ request }) => {
     return {
       origin: request.headers.get('origin'),
