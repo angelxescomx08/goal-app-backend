@@ -13,6 +13,8 @@ export const goalSchema = z.object({
   parentGoalId: z.uuid().nullish(),
   userId: z.uuid(),
   unitId: z.uuid().nullish(),
+  unitIdCompleted: z.uuid().nullish(),
+  unitCompletedAmount: z.number().nullish(),
   title: z.string().min(1, "Título requerido"),
   goalType: goalTypes,
   target: z.number().nullish(),
@@ -43,6 +45,15 @@ export const createGoalSchema = goalSchema.omit({
       ctx.addIssue({
         path: ["target"],
         message: "El objetivo es requerido cuando el tipo es target",
+        code: "custom",
+      })
+    }
+  }
+  if (data.unitIdCompleted) {
+    if (!data.unitCompletedAmount) {
+      ctx.addIssue({
+        path: ["unitCompletedAmount"],
+        message: "La cantidad completada es requerida cuando el unitIdCompleted es proporcionado",
         code: "custom",
       })
     }

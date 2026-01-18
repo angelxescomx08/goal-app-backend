@@ -1,8 +1,8 @@
 import { Session } from "../../../lib/auth";
 import { db } from "../../../db/db";
-import { goalProgress, goals } from '../../../db/schema';
+import { goalProgress, goals, userStats } from '../../../db/schema';
 import { and, eq, gte, lte } from "drizzle-orm";
-import { CreateGoalSchema, goalTypes } from '../schemas/goalSchema';
+import { CreateGoalSchema } from '../schemas/goalSchema';
 import { Context, } from "elysia";
 import crypto from "node:crypto";
 import { Pagination } from "../../../types/pagination";
@@ -77,6 +77,8 @@ export async function createGoal(context: {
       parentGoalId: body.parentGoalId,
       unitId: body.unitId,
       target: body.target,
+      unitIdCompleted: body.unitIdCompleted,
+      unitCompletedAmount: body.unitCompletedAmount,
     }).returning();
 
     if (body.parentGoalId) {
@@ -166,17 +168,19 @@ export async function toggleGoalCompletion(context: {
       where: eq(goals.id, id),
     });
     if (!goal) return status(404, { error: "Meta no encontrada" });
+    if (goal.completedAt) return status(400, { error: "La meta ya está completada" });
     if (goal.goalType !== "manual")
       return status(400, { error: "No se puede marcar como completada una meta que no sea manual" });
-    if (goal.completedAt) {
-      await db.update(goals).set({ completedAt: null }).where(eq(goals.id, id));
-    } else {
-      // IMPORTANTE: Usar nowUTC() para obtener fecha actual en UTC
-      await db.update(goals).set({ completedAt: nowUTC() }).where(eq(goals.id, id));
+    await db.update(goals).set({ completedAt: nowUTC() }).where(eq(goals.id, id));
+    if (goal.unitIdCompleted && goal.unitCompletedAmount) {
+      await db.insert(userStats).values({
+        id: crypto.randomUUID(),
+        userId: goal.userId,
+        unitId: goal.unitIdCompleted,
+        value: goal.unitCompletedAmount,
+      });
     }
-    if (goal.parentGoalId) {
-      await updateParentGoalProgress(goal.parentGoalId);
-    }
+    if (goal.parentGoalId) await updateParentGoalProgress(goal.parentGoalId);
     return status(200, { message: "Meta marcada como completada" });
   } catch (error) {
     console.error(error);

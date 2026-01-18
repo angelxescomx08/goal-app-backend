@@ -1,7 +1,7 @@
 import { Context } from 'elysia';
 import { CreateGoalProgress } from '../schemas/goalProgressSchema';
 import { db } from '../../../db/db';
-import { goalProgress, goals } from '../../../db/schema';
+import { goalProgress, goals, userStats } from '../../../db/schema';
 import { eq } from 'drizzle-orm';
 import { updateParentGoalProgress } from '../../goals/utils/updateParentGoalProgress';
 import { nowUTC } from '../../../lib/dateUtils';
@@ -42,6 +42,14 @@ export async function createGoalProgress(context: {
         currentProgress: newProgress,
         completedAt: completed,
       }).where(eq(goals.id, body.goalId));
+      if (goal.unitIdCompleted && goal.unitCompletedAmount) {
+        await db.insert(userStats).values({
+          id: crypto.randomUUID(),
+          userId: goal.userId,
+          unitId: goal.unitIdCompleted,
+          value: goal.unitCompletedAmount,
+        });
+      }
       if (goal.parentGoalId) {
         await updateParentGoalProgress(goal.parentGoalId);
       }

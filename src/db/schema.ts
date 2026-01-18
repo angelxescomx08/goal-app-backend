@@ -113,6 +113,8 @@ export const goals = pgTable("goals", {
     .references((): AnyPgColumn => goals.id, { onDelete: "cascade" }),
   userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
   unitId: text("unit_id").references(() => units.id, { onDelete: "restrict" }),
+  unitIdCompleted: text("unit_id_completed").references(() => units.id, { onDelete: "restrict" }),
+  unitCompletedAmount: real("unit_completed_amount"),
   title: text("title").notNull(),
   goalType: rolesEnum("goal_type").notNull(),
   target: real("target"),
@@ -174,6 +176,10 @@ export const goalRelations = relations(goals, ({ one, many }) => ({
   parentGoal: one(goals, {
     fields: [goals.parentGoalId],
     references: [goals.id],
+  }),
+  unitCompleted: one(units, {
+    fields: [goals.unitIdCompleted],
+    references: [units.id],
   }),
 }));
 

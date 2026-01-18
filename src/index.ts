@@ -8,7 +8,7 @@ import { goalProgressRouter } from "./modules/goal-progress/routes/goalProgressR
 export default new Elysia()
   .use(
     cors({
-      origin: ['https://goals-app-react.vercel.app', 'http://localhost:5173'], // URL exacta sin / al final
+      origin: ['https://goals-app-react.vercel.app', 'http://localhost:5173'],
       credentials: true,
       allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
