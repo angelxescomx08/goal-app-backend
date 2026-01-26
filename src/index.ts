@@ -5,6 +5,7 @@ import { goalRouter } from "./modules/goals/routes/goalRouter";
 import { unitRouter } from "./modules/units/routes/unitRouter";
 import { goalProgressRouter } from "./modules/goal-progress/routes/goalProgressRouter";
 import { userStatsRouter } from "./modules/user-stats/routes/userStatsRouter";
+import { chatRouter } from "./modules/chat/routes/chatRouter";
 
 export default new Elysia()
   .use(
@@ -20,6 +21,7 @@ export default new Elysia()
   .use(unitRouter)
   .use(goalProgressRouter)
   .use(userStatsRouter)
+  .use(chatRouter)
   .get('/', ({ request }) => {
     return {
       origin: request.headers.get('origin'),
