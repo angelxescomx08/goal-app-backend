@@ -1,7 +1,7 @@
 import { Session } from "../../../lib/auth";
 import { db } from "../../../db/db";
 import { goalProgress, goals, userStats } from '../../../db/schema';
-import { and, eq, gte, lte } from "drizzle-orm";
+import { and, eq, gte, lte, or, ilike, isNull, isNotNull } from "drizzle-orm";
 import { CreateGoalSchema } from '../schemas/goalSchema';
 import { Context, } from "elysia";
 import crypto from "node:crypto";
@@ -19,23 +19,46 @@ import { formatUTCToDay, nowUTC } from "../../../lib/dateUtils";
 export async function getGoalsByUser(context: {
   session: Session["session"],
   query: Pagination & {
-    startDate: Date; // ISO 8601 UTC parseado
-    endDate: Date;   // ISO 8601 UTC parseado
+    startDate: Date;
+    endDate: Date;
+    search?: string;
+    completed?: boolean;
+    goalType?: "target" | "manual" | "goals";
+    excludeChildGoals?: boolean;
   },
   status: Context["status"]
 }) {
   const { session, query, status } = context;
 
-  // Usar fechas directamente sin conversiones
-  // El frontend ya las envió en UTC correcto
+  const conditions = [
+    eq(goals.userId, session.userId),
+    gte(goals.createdAt, query.startDate),
+    lte(goals.createdAt, query.endDate),
+  ];
+
+  if (query.search?.trim()) {
+    const term = `%${query.search.trim()}%`;
+    conditions.push(or(
+      ilike(goals.title, term),
+      ilike(goals.description, term),
+    )!);
+  }
+  if (query.completed === true) {
+    conditions.push(isNotNull(goals.completedAt));
+  } else if (query.completed === false) {
+    conditions.push(isNull(goals.completedAt));
+  }
+  if (query.goalType) {
+    conditions.push(eq(goals.goalType, query.goalType));
+  }
+  if (query.excludeChildGoals === true) {
+    conditions.push(isNull(goals.parentGoalId));
+  }
+
   const userGoals = await db
     .select()
     .from(goals)
-    .where(and(
-      eq(goals.userId, session.userId),
-      gte(goals.createdAt, query.startDate), // UTC directo
-      lte(goals.createdAt, query.endDate),   // UTC directo
-    ))
+    .where(and(...conditions))
     .limit(query.limit + 1)
     .offset((query.page - 1) * query.limit);
   const hasMore = userGoals.length > query.limit;
