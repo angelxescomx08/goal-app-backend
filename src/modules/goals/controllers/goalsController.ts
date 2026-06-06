@@ -254,6 +254,106 @@ export async function deleteGoal(context: {
   }
 }
 
+export async function getGoalProjection(context: {
+  id: string,
+  status: Context["status"]
+}) {
+  const { id, status } = context;
+  try {
+    const [goal] = await db
+      .select({
+        goalType: goals.goalType,
+        target: goals.target,
+        currentProgress: goals.currentProgress,
+        completedAt: goals.completedAt,
+      })
+      .from(goals)
+      .where(eq(goals.id, id))
+      .limit(1);
+
+    if (!goal) return status(404, { error: "Meta no encontrada" });
+    if (goal.goalType !== "target")
+      return status(400, { error: "La proyección solo aplica a metas de tipo target" });
+
+    const target = goal.target ?? 0;
+    const current = goal.currentProgress ?? 0;
+    const remaining = Math.max(target - current, 0);
+
+    // Each subquery groups progress by period then averages those period totals.
+    // All use the covering index (goalId, createdAt, progress) → index-only scans.
+    const weeklySubq = db
+      .select({ total: sql<number>`SUM(${goalProgress.progress})`.as('total') })
+      .from(goalProgress)
+      .where(and(
+        eq(goalProgress.goalId, id),
+        sql`${goalProgress.createdAt} >= NOW() AT TIME ZONE 'UTC' - INTERVAL '1 month'`,
+      ))
+      .groupBy(sql`DATE_TRUNC('week', ${goalProgress.createdAt} AT TIME ZONE 'UTC')`)
+      .as('w');
+
+    const monthlySubq = db
+      .select({ total: sql<number>`SUM(${goalProgress.progress})`.as('total') })
+      .from(goalProgress)
+      .where(and(
+        eq(goalProgress.goalId, id),
+        sql`${goalProgress.createdAt} >= NOW() AT TIME ZONE 'UTC' - INTERVAL '4 months'`,
+      ))
+      .groupBy(sql`DATE_TRUNC('month', ${goalProgress.createdAt} AT TIME ZONE 'UTC')`)
+      .as('m');
+
+    const yearlySubq = db
+      .select({ total: sql<number>`SUM(${goalProgress.progress})`.as('total') })
+      .from(goalProgress)
+      .where(and(
+        eq(goalProgress.goalId, id),
+        sql`${goalProgress.createdAt} >= NOW() AT TIME ZONE 'UTC' - INTERVAL '4 years'`,
+      ))
+      .groupBy(sql`DATE_TRUNC('year', ${goalProgress.createdAt} AT TIME ZONE 'UTC')`)
+      .as('y');
+
+    const [[weekly], [monthly], [yearly]] = await Promise.all([
+      db.select({ avg: sql<number>`COALESCE(AVG(${weeklySubq.total}), 0)::real` }).from(weeklySubq),
+      db.select({ avg: sql<number>`COALESCE(AVG(${monthlySubq.total}), 0)::real` }).from(monthlySubq),
+      db.select({ avg: sql<number>`COALESCE(AVG(${yearlySubq.total}), 0)::real` }).from(yearlySubq),
+    ]);
+
+    let daysLeft: number | null = null;
+    let estimatedDate: string | null = null;
+
+    if (goal.completedAt) {
+      daysLeft = 0;
+      estimatedDate = goal.completedAt.toISOString();
+    } else {
+      // Prefer monthly rate for projection; fall back to weekly if no monthly data
+      const dailyRate = monthly.avg > 0 ? monthly.avg / 30 : weekly.avg / 7;
+      if (dailyRate > 0) {
+        daysLeft = Math.ceil(remaining / dailyRate);
+        estimatedDate = new Date(Date.now() + daysLeft * 24 * 60 * 60 * 1000).toISOString();
+      }
+    }
+
+    const round2 = (n: number) => Math.round(n * 100) / 100;
+
+    return status(200, {
+      target,
+      currentProgress: current,
+      remaining,
+      averages: {
+        weekly: round2(weekly.avg),
+        monthly: round2(monthly.avg),
+        yearly: round2(yearly.avg),
+      },
+      projection: {
+        daysLeft,
+        estimatedDate,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    return status(500, { error: "Falló la proyección de la meta" });
+  }
+}
+
 export async function goalStatistics(context: {
   id: string,
   user: Session["user"],

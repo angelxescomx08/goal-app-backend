@@ -1,6 +1,6 @@
 import { betterAuthMiddleware } from "../../../lib/auth";
 import { paginationSchema } from "../../../types/pagination";
-import { createGoal, deleteGoal, getGoalById, getGoalsByUser, getGoalsWithTypeGoal, getStatistics, goalStatistics, toggleGoalCompletion } from "../controllers/goalsController";
+import { createGoal, deleteGoal, getGoalById, getGoalProjection, getGoalsByUser, getGoalsWithTypeGoal, getStatistics, goalStatistics, toggleGoalCompletion } from "../controllers/goalsController";
 import { createGoalSchema, goalTypes } from "../schemas/goalSchema";
 import { utcDateStringSchema } from "../../../lib/dateSchemas";
 import { z } from "zod";
@@ -73,6 +73,13 @@ export const goalRouter = betterAuthMiddleware
       })
       .get("/statistics/:id",
         ({ params, status, user }) => goalStatistics({ id: params.id, status, user }), {
+        auth: true,
+        params: z.object({
+          id: z.string(),
+        }),
+      })
+      .get("/:id/projection",
+        ({ params, status }) => getGoalProjection({ id: params.id, status }), {
         auth: true,
         params: z.object({
           id: z.string(),
