@@ -15,5 +15,14 @@ export const createGoalProgressSchema = goalProgressSchema.omit({
   updatedAt: true,
 })
 
+export const listGoalProgressQuerySchema = z.object({
+  goalId: z.string().uuid(),
+})
+
+export const updateGoalProgressSchema = z.object({
+  progress: z.number().positive(),
+})
+
 export type GoalProgress = z.infer<typeof goalProgressSchema>
 export type CreateGoalProgress = z.infer<typeof createGoalProgressSchema>
+export type UpdateGoalProgress = z.infer<typeof updateGoalProgressSchema>
