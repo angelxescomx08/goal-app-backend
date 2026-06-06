@@ -1,11 +1,6 @@
 import { z } from "zod"
 import { dateSchema } from "../../../lib/dateSchemas"
 
-/**
- * Schema para GoalProgress
- * IMPORTANTE: Todas las fechas se manejan en UTC
- * - createdAt, updatedAt: Date objects en UTC
- */
 export const goalProgressSchema = z.object({
   id: z.uuid(),
   goalId: z.uuid(),

@@ -5,26 +5,6 @@ import { Context } from "elysia";
 import { and, eq, gte, lte, sql } from "drizzle-orm";
 import { UnitStatsQuery } from "../schemas/unitStatsSchema";
 
-/**
- * Controlador de estadísticas para unidades
- * 
- * CONTRATO DE FECHAS:
- * - El frontend envía fechas YA convertidas a UTC en formato ISO 8601 UTC
- * - startUtc y endUtc son Date objects parseados desde ISO 8601 UTC
- * - Se usan DIRECTAMENTE en consultas sin conversiones
- * - Todas las agregaciones se hacen en UTC
- */
-
-/**
- * Obtiene estadísticas de una unidad en un rango de fechas
- * 
- * Genera datos para:
- * 1. Progreso en el tiempo (line chart) - progreso diario agrupado
- * 2. Progreso acumulado (area/line) - progreso total acumulado
- * 3. Conteo de eventos de progreso - número de registros por día
- * 4. Progreso por goal (bar/stacked bar) - total por goal
- * 5. Distribución temporal - progreso total agrupado por día
- */
 export async function getUnitStatistics(context: {
   session: Session["session"],
   query: UnitStatsQuery,
@@ -42,14 +22,9 @@ export async function getUnitStatistics(context: {
       return status(404, { error: "Unidad no encontrada" });
     }
 
-    // Usar fechas directamente sin conversiones
-    // El frontend ya las envió en UTC correcto
     const startUtc = query.startUtc;
     const endUtc = query.endUtc;
 
-    // 1. Progreso en el tiempo (agrupado por día)
-    // Agrupa por día en UTC y suma el progreso de todos los goals de la unidad
-    // La conexión PostgreSQL está configurada en UTC, así que DATE() extrae correctamente el día en UTC
     const progressOverTimeQuery = await db
       .select({
         date: sql<string>`DATE(${goalProgress.createdAt} AT TIME ZONE 'UTC')::text`.as('date'),
@@ -67,8 +42,6 @@ export async function getUnitStatistics(context: {
       .groupBy(sql`DATE(${goalProgress.createdAt} AT TIME ZONE 'UTC')`)
       .orderBy(sql`DATE(${goalProgress.createdAt} AT TIME ZONE 'UTC')`);
 
-    // 2. Progreso acumulado
-    // Calcula el progreso acumulado día a día
     const cumulativeData: Array<{ date: string; total: number }> = [];
     let cumulativeTotal = 0;
 
@@ -80,7 +53,6 @@ export async function getUnitStatistics(context: {
       });
     }
 
-    // 3. Conteo de eventos de progreso por día
     const activityCountQuery = await db
       .select({
         date: sql<string>`DATE(${goalProgress.createdAt} AT TIME ZONE 'UTC')::text`.as('date'),
@@ -98,7 +70,6 @@ export async function getUnitStatistics(context: {
       .groupBy(sql`DATE(${goalProgress.createdAt} AT TIME ZONE 'UTC')`)
       .orderBy(sql`DATE(${goalProgress.createdAt} AT TIME ZONE 'UTC')`);
 
-    // 4. Progreso por goal (total acumulado por goal en el rango)
     const progressByGoalQuery = await db
       .select({
         goalId: goals.id,
@@ -117,7 +88,6 @@ export async function getUnitStatistics(context: {
       .groupBy(goals.id, goals.title)
       .orderBy(sql`COALESCE(SUM(${goalProgress.progress}), 0) DESC`);
 
-    // Formatear fechas para respuesta (asegurar formato YYYY-MM-DD)
     const progressOverTime = progressOverTimeQuery.map(row => ({
       date: row.date,
       value: Number(row.value),

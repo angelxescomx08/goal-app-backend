@@ -1,21 +1,14 @@
 import { Session } from "../../../lib/auth";
 import { db } from "../../../db/db";
 import { goalProgress, goals, userStats } from '../../../db/schema';
-import { and, eq, gte, lte, or, ilike, isNull, isNotNull } from "drizzle-orm";
+import { and, eq, gte, lte, or, ilike, isNull, isNotNull, sql } from "drizzle-orm";
 import { CreateGoalSchema } from '../schemas/goalSchema';
-import { Context, } from "elysia";
+import { Context } from "elysia";
 import crypto from "node:crypto";
 import { Pagination } from "../../../types/pagination";
 import { updateParentGoalProgress } from "../utils/updateParentGoalProgress";
-import { formatUTCToDay, nowUTC } from "../../../lib/dateUtils";
+import { nowUTC } from "../../../lib/dateUtils";
 
-/**
- * CONTRATO DE FECHAS:
- * - El frontend envía fechas YA convertidas a UTC en formato ISO 8601 UTC
- * - startDate y endDate son Date objects parseados desde ISO 8601 UTC
- * - Se usan DIRECTAMENTE en consultas sin conversiones
- * - No se hacen ajustes ni reinterpretaciones
- */
 export async function getGoalsByUser(context: {
   session: Session["session"],
   query: Pagination & {
@@ -82,9 +75,11 @@ export async function createGoal(context: {
   try {
 
     if (body.parentGoalId) {
-      const parentGoal = await db.query.goals.findFirst({
-        where: eq(goals.id, body.parentGoalId),
-      });
+      const [parentGoal] = await db
+        .select({ goalType: goals.goalType })
+        .from(goals)
+        .where(eq(goals.id, body.parentGoalId))
+        .limit(1);
       if (!parentGoal)
         return status(404, { error: "Meta padre no encontrada" });
       if (parentGoal.goalType !== "goals")
@@ -139,13 +134,6 @@ export async function getGoalById(context: {
   return status(200, goal);
 }
 
-/**
- * CONTRATO DE FECHAS:
- * - El frontend envía fechas YA convertidas a UTC en formato ISO 8601 UTC
- * - startDate y endDate son Date objects parseados desde ISO 8601 UTC
- * - Se usan DIRECTAMENTE en consultas sin conversiones
- * - No se hacen ajustes ni reinterpretaciones
- */
 export async function getStatistics(context: {
   session: Session["session"],
   user: Session["user"],
@@ -158,22 +146,22 @@ export async function getStatistics(context: {
   const { session, user, status, query } = context;
 
   try {
-    // Usar fechas directamente sin conversiones
-    // El frontend ya las envió en UTC correcto
-    const goalsByUser = await db.query.goals.findMany({
-      where: and(
+    const [result] = await db
+      .select({
+        totalGoals: sql<number>`count(*)::int`,
+        totalCompletedGoals: sql<number>`count(*) filter (where ${goals.completedAt} is not null)::int`,
+      })
+      .from(goals)
+      .where(and(
         eq(goals.userId, user.id),
-        gte(goals.createdAt, query.startDate), // UTC directo
-        lte(goals.createdAt, query.endDate)),  // UTC directo
-    });
-
-    const totalGoals = goalsByUser.length;
-    const totalCompletedGoals = goalsByUser.filter((goal) => goal.completedAt !== null).length;
+        gte(goals.createdAt, query.startDate),
+        lte(goals.createdAt, query.endDate),
+      ));
 
     return status(200, {
-      totalGoals,
-      totalCompletedGoals,
-      pendingGoals: totalGoals - totalCompletedGoals,
+      totalGoals: result.totalGoals,
+      totalCompletedGoals: result.totalCompletedGoals,
+      pendingGoals: result.totalGoals - result.totalCompletedGoals,
     });
   } catch (error) {
     console.error(error);
@@ -187,9 +175,18 @@ export async function toggleGoalCompletion(context: {
 }) {
   const { id, status } = context;
   try {
-    const goal = await db.query.goals.findFirst({
-      where: eq(goals.id, id),
-    });
+    const [goal] = await db
+      .select({
+        goalType: goals.goalType,
+        completedAt: goals.completedAt,
+        userId: goals.userId,
+        unitIdCompleted: goals.unitIdCompleted,
+        unitCompletedAmount: goals.unitCompletedAmount,
+        parentGoalId: goals.parentGoalId,
+      })
+      .from(goals)
+      .where(eq(goals.id, id))
+      .limit(1);
     if (!goal) return status(404, { error: "Meta no encontrada" });
     if (goal.completedAt) return status(400, { error: "La meta ya está completada" });
     if (goal.goalType !== "manual")
@@ -237,9 +234,11 @@ export async function deleteGoal(context: {
 }) {
   const { id, status } = context;
   try {
-    const goal = await db.query.goals.findFirst({
-      where: eq(goals.id, id),
-    });
+    const [goal] = await db
+      .select({ parentGoalId: goals.parentGoalId })
+      .from(goals)
+      .where(eq(goals.id, id))
+      .limit(1);
     if (!goal) return status(404, { error: "Meta no encontrada" });
 
     const deletedGoal = await db.delete(goals).where(eq(goals.id, id));
@@ -262,37 +261,24 @@ export async function goalStatistics(context: {
 }) {
   const { id, status, user } = context;
   try {
-    const goal = await db.query.goals.findFirst({
-      where: eq(goals.id, id),
-    });
+    const [goal] = await db
+      .select({ goalType: goals.goalType })
+      .from(goals)
+      .where(eq(goals.id, id))
+      .limit(1);
     if (!goal) return status(404, { error: "Meta no encontrada" });
     let historicalData: { date: string, progress: number }[] = [];
 
     if (goal.goalType === "target") {
-      const goalProgressRecords = await db.query.goalProgress.findMany({
-        where: eq(goalProgress.goalId, goal.id),
-      });
-
-      const dates = new Map<string, number>();
-
-      // IMPORTANTE: Usar dayjs.utc() para formatear fechas en UTC
-      // Esto asegura que el día se extraiga correctamente sin considerar zona local
-      for (const record of goalProgressRecords) {
-        const date = formatUTCToDay(record.createdAt); // Formatea en UTC
-        if (!dates.has(date)) {
-          dates.set(date, record.progress ?? 0);
-        } else {
-          const prev = dates.get(date) ?? 0;
-          const inc = record.progress ?? 0;
-          dates.set(date, prev + inc);
-        }
-      }
-      for (const [date, progress] of dates.entries()) {
-        historicalData.push({
-          date,
-          progress,
-        });
-      }
+      historicalData = await db
+        .select({
+          date: sql<string>`DATE(${goalProgress.createdAt} AT TIME ZONE 'UTC')::text`,
+          progress: sql<number>`COALESCE(SUM(${goalProgress.progress}), 0)::real`,
+        })
+        .from(goalProgress)
+        .where(eq(goalProgress.goalId, id))
+        .groupBy(sql`DATE(${goalProgress.createdAt} AT TIME ZONE 'UTC')`)
+        .orderBy(sql`DATE(${goalProgress.createdAt} AT TIME ZONE 'UTC')`);
     }
 
     return status(200, {

@@ -3,11 +3,6 @@ import { dateSchema } from "../../../lib/dateSchemas"
 
 export const goalTypes = z.enum(["target", "manual", "goals"])
 
-/**
- * Schema para Goal
- * IMPORTANTE: Todas las fechas se manejan en UTC
- * - createdAt, updatedAt, completedAt: Date objects en UTC
- */
 export const goalSchema = z.object({
   id: z.uuid(),
   parentGoalId: z.uuid().nullish(),

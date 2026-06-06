@@ -7,10 +7,6 @@ import { updateParentGoalProgress } from '../../goals/utils/updateParentGoalProg
 import { nowUTC } from '../../../lib/dateUtils';
 import crypto from 'node:crypto';
 
-/**
- * IMPORTANTE: Todas las fechas se manejan en UTC
- * - completedAt se crea usando nowUTC() para garantizar UTC
- */
 export async function createGoalProgress(context: {
   body: CreateGoalProgress,
   status: Context["status"]
@@ -35,8 +31,7 @@ export async function createGoalProgress(context: {
       const newProgress = (goal.currentProgress ?? 0) + (body.progress ?? 0)
       let completed = null;
       if (newProgress >= (goal.target ?? 0)) {
-        // IMPORTANTE: Usar nowUTC() para obtener fecha actual en UTC
-        completed = nowUTC();
+          completed = nowUTC();
       }
       await db.update(goals).set({
         currentProgress: newProgress,

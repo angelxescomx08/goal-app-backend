@@ -1,22 +1,19 @@
+import crypto from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db } from "../../../db/db";
 import { goals, userStats } from "../../../db/schema";
 import { nowUTC } from "../../../lib/dateUtils";
 
-/**
- * IMPORTANTE: Todas las fechas se manejan en UTC
- * - completedAt se crea usando nowUTC() para garantizar UTC
- */
 export async function updateParentGoalProgress(parentGoalId: string) {
-  const childGoals = await db.query.goals.findMany({
-    where: eq(goals.parentGoalId, parentGoalId),
-  });
+  const childGoals = await db
+    .select({ completedAt: goals.completedAt })
+    .from(goals)
+    .where(eq(goals.parentGoalId, parentGoalId));
 
-  const completedChildGoals = childGoals.filter((goal) => goal.completedAt !== null);
-  const currentProgress = completedChildGoals.length / childGoals.length;
+  const completedCount = childGoals.filter(g => g.completedAt !== null).length;
+  const currentProgress = completedCount / childGoals.length;
   let completed = null;
   if (currentProgress >= 1) {
-    // IMPORTANTE: Usar nowUTC() para obtener fecha actual en UTC
     completed = nowUTC();
   }
 
@@ -27,12 +24,7 @@ export async function updateParentGoalProgress(parentGoalId: string) {
   }).where(eq(goals.id, parentGoalId)).returning();
 
   if (completed) {
-    const parentGoal = await db.query.goals.findFirst({
-      where: eq(goals.id, parentGoalId),
-    });
-    if (
-      updatedParentGoal && updatedParentGoal.unitIdCompleted && updatedParentGoal.unitCompletedAmount
-    ) {
+    if (updatedParentGoal?.unitIdCompleted && updatedParentGoal.unitCompletedAmount) {
       await db.insert(userStats).values({
         id: crypto.randomUUID(),
         userId: updatedParentGoal.userId,
@@ -40,8 +32,7 @@ export async function updateParentGoalProgress(parentGoalId: string) {
         value: updatedParentGoal.unitCompletedAmount,
       });
     }
-    if (!parentGoal) return;
-    if (!parentGoal.parentGoalId) return;
-    await updateParentGoalProgress(parentGoal.parentGoalId);
+    if (!updatedParentGoal?.parentGoalId) return;
+    await updateParentGoalProgress(updatedParentGoal.parentGoalId);
   }
 }

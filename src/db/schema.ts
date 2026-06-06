@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { pgTable, text, timestamp, boolean, index, pgEnum, real, AnyPgColumn } from "drizzle-orm/pg-core";
 
 /**
@@ -130,6 +130,11 @@ export const goals = pgTable(
     index("idx_goals_user_id_goal_type").on(table.userId, table.goalType),
     index("idx_goals_parent_goal_id").on(table.parentGoalId),
     index("idx_goals_unit_id").on(table.unitId),
+    // Partial indexes for the two most common filters in getGoalsByUser
+    index("idx_goals_user_id_pending").on(table.userId, table.createdAt)
+      .where(sql`${table.completedAt} IS NULL`),
+    index("idx_goals_user_id_root").on(table.userId, table.createdAt)
+      .where(sql`${table.parentGoalId} IS NULL`),
   ],
 )
 
@@ -141,7 +146,7 @@ export const goalProgress = pgTable(
     progress: real("progress"),
     ...commonColumns,
   },
-  (table) => [index("idx_goal_progress_goal_id_created_at").on(table.goalId, table.createdAt)],
+  (table) => [index("idx_goal_progress_goal_id_created_at").on(table.goalId, table.createdAt, table.progress)],
 );
 
 export const userStats = pgTable(
