@@ -1,7 +1,7 @@
 import { betterAuthMiddleware } from "../../../lib/auth";
 import { paginationSchema } from "../../../types/pagination";
-import { createGoal, deleteGoal, getGoalById, getGoalProjection, getGoalsByUser, getGoalsWithTypeGoal, getStatistics, goalStatistics, toggleGoalCompletion } from "../controllers/goalsController";
-import { createGoalSchema, goalTypes } from "../schemas/goalSchema";
+import { createGoal, deleteGoal, getGoalById, getGoalProjection, getGoalsByUser, getGoalsWithTypeGoal, getStatistics, goalStatistics, toggleGoalCompletion, updateGoal } from "../controllers/goalsController";
+import { createGoalSchema, goalTypes, updateGoalSchema } from "../schemas/goalSchema";
 import { utcDateStringSchema } from "../../../lib/dateSchemas";
 import { z } from "zod";
 
@@ -52,6 +52,15 @@ export const goalRouter = betterAuthMiddleware
           startDate: utcDateStringSchema,
           endDate: utcDateStringSchema,
         }),
+      })
+      .put(
+        "/:id",
+        ({ params, session, body, status }) => updateGoal({ id: params.id, body, session, status }), {
+        auth: true,
+        params: z.object({
+          id: z.string(),
+        }),
+        body: updateGoalSchema,
       })
       .put(
         "/:id/toggle-completion",

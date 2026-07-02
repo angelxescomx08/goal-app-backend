@@ -2,7 +2,7 @@ import { Session } from "../../../lib/auth";
 import { db } from "../../../db/db";
 import { goalProgress, goals, userStats } from '../../../db/schema';
 import { and, eq, gte, lte, or, ilike, isNull, isNotNull, sql } from "drizzle-orm";
-import { CreateGoalSchema } from '../schemas/goalSchema';
+import { CreateGoalSchema, UpdateGoalSchema } from '../schemas/goalSchema';
 import { Context } from "elysia";
 import crypto from "node:crypto";
 import { Pagination } from "../../../types/pagination";
@@ -132,6 +132,93 @@ export async function getGoalById(context: {
     });
   }
   return status(200, goal);
+}
+
+export async function updateGoal(context: {
+  id: string,
+  body: UpdateGoalSchema,
+  session: Session["session"],
+  status: Context["status"]
+}) {
+  const { id, body, session, status } = context;
+  try {
+    const [goal] = await db
+      .select()
+      .from(goals)
+      .where(eq(goals.id, id))
+      .limit(1);
+    if (!goal) return status(404, { error: "Meta no encontrada" });
+    if (goal.userId !== session.userId) return status(404, { error: "Meta no encontrada" });
+
+    const nextGoalType = body.goalType ?? goal.goalType;
+    const nextUnitId = body.unitId !== undefined ? body.unitId : goal.unitId;
+    const nextTarget = body.target !== undefined ? body.target : goal.target;
+
+    if (nextGoalType === "target" && (!nextUnitId || !nextTarget)) {
+      return status(400, { error: "La unidad y el objetivo son requeridos cuando el tipo es target" });
+    }
+
+    if (goal.goalType === "goals" && nextGoalType !== "goals") {
+      const [childGoal] = await db
+        .select({ id: goals.id })
+        .from(goals)
+        .where(eq(goals.parentGoalId, id))
+        .limit(1);
+      if (childGoal)
+        return status(400, { error: "No se puede cambiar el tipo de una meta contenedora que tiene metas hijas" });
+    }
+
+    let nextParentGoalId = goal.parentGoalId;
+    if (body.parentGoalId !== undefined) {
+      nextParentGoalId = body.parentGoalId;
+
+      if (nextParentGoalId) {
+        if (nextParentGoalId === id)
+          return status(400, { error: "Una meta no puede ser su propia meta padre" });
+
+        const [newParent] = await db
+          .select({ goalType: goals.goalType, parentGoalId: goals.parentGoalId })
+          .from(goals)
+          .where(eq(goals.id, nextParentGoalId))
+          .limit(1);
+        if (!newParent) return status(404, { error: "Meta padre no encontrada" });
+        if (newParent.goalType !== "goals")
+          return status(400, { error: "La meta padre no permite crear metas hijas" });
+
+        // Evitar ciclos: subir por los ancestros del nuevo padre y verificar que nunca se llegue a esta meta
+        let cursor = newParent.parentGoalId;
+        while (cursor) {
+          if (cursor === id)
+            return status(400, { error: "No se puede asignar una meta padre que crearía un ciclo" });
+          const [ancestor] = await db
+            .select({ parentGoalId: goals.parentGoalId })
+            .from(goals)
+            .where(eq(goals.id, cursor))
+            .limit(1);
+          cursor = ancestor?.parentGoalId ?? null;
+        }
+      }
+    }
+
+    const oldParentGoalId = goal.parentGoalId;
+
+    const [updatedGoal] = await db.update(goals).set({
+      ...body,
+      ...(body.parentGoalId !== undefined ? { parentGoalId: nextParentGoalId } : {}),
+    }).where(eq(goals.id, id)).returning();
+
+    if (oldParentGoalId && oldParentGoalId !== nextParentGoalId) {
+      await updateParentGoalProgress(oldParentGoalId);
+    }
+    if (nextParentGoalId) {
+      await updateParentGoalProgress(nextParentGoalId);
+    }
+
+    return status(200, { goal: updatedGoal });
+  } catch (error) {
+    console.error(error);
+    return status(500, { error: "Falló la actualización de la meta" });
+  }
 }
 
 export async function getStatistics(context: {

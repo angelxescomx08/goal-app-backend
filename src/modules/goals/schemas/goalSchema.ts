@@ -55,5 +55,27 @@ export const createGoalSchema = goalSchema.omit({
   }
 })
 
+export const updateGoalSchema = goalSchema.pick({
+  title: true,
+  description: true,
+  target: true,
+  unitId: true,
+  unitIdCompleted: true,
+  unitCompletedAmount: true,
+  goalType: true,
+  parentGoalId: true,
+}).partial().superRefine((data, ctx) => {
+  if (data.unitIdCompleted) {
+    if (!data.unitCompletedAmount) {
+      ctx.addIssue({
+        path: ["unitCompletedAmount"],
+        message: "La cantidad completada es requerida cuando el unitIdCompleted es proporcionado",
+        code: "custom",
+      })
+    }
+  }
+})
+
 export type GoalSchema = z.infer<typeof goalSchema>
 export type CreateGoalSchema = z.infer<typeof createGoalSchema>
+export type UpdateGoalSchema = z.infer<typeof updateGoalSchema>
