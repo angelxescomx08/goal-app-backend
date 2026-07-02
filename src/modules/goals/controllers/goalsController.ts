@@ -431,6 +431,78 @@ export async function getGoalProjection(context: {
   }
 }
 
+export async function getGoalStreak(context: {
+  id: string,
+  status: Context["status"]
+}) {
+  const { id, status } = context;
+  try {
+    const [goal] = await db
+      .select({ goalType: goals.goalType })
+      .from(goals)
+      .where(eq(goals.id, id))
+      .limit(1);
+
+    if (!goal) return status(404, { error: "Meta no encontrada" });
+    if (goal.goalType !== "manual")
+      return status(400, { error: "La racha solo aplica a metas de tipo manual" });
+
+    const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+
+    // Gaps-and-islands: agrupa los días consecutivos con registro de actividad en 1 sola consulta
+    const result = await db.execute<{
+      total_days: number;
+      max_streak: number;
+      average_streak: number | string;
+    }>(sql`
+      WITH days AS (
+        SELECT DISTINCT DATE(created_at AT TIME ZONE 'UTC') AS day
+        FROM goal_progress
+        WHERE goal_id = ${id} AND created_at >= ${oneYearAgo}
+      ),
+      grouped AS (
+        SELECT day, day - (ROW_NUMBER() OVER (ORDER BY day))::int AS grp
+        FROM days
+      ),
+      streaks AS (
+        SELECT COUNT(*)::int AS streak_length
+        FROM grouped
+        GROUP BY grp
+      )
+      SELECT
+        (SELECT COUNT(*) FROM days)::int AS total_days,
+        COALESCE(MAX(streak_length), 0)::int AS max_streak,
+        COALESCE(ROUND(AVG(streak_length)::numeric, 2), 0) AS average_streak
+      FROM streaks
+    `);
+
+    const row = result.rows[0] ?? { total_days: 0, max_streak: 0, average_streak: 0 };
+
+    const dailyActivity = await db
+      .select({
+        date: sql<string>`DATE(${goalProgress.createdAt} AT TIME ZONE 'UTC')::text`,
+        count: sql<number>`COUNT(*)::int`,
+      })
+      .from(goalProgress)
+      .where(and(
+        eq(goalProgress.goalId, id),
+        gte(goalProgress.createdAt, oneYearAgo),
+      ))
+      .groupBy(sql`DATE(${goalProgress.createdAt} AT TIME ZONE 'UTC')`)
+      .orderBy(sql`DATE(${goalProgress.createdAt} AT TIME ZONE 'UTC')`);
+
+    return status(200, {
+      totalDays: Number(row.total_days),
+      maxStreak: Number(row.max_streak),
+      averageStreak: Number(row.average_streak),
+      dailyActivity,
+    });
+  } catch (error) {
+    console.error(error);
+    return status(500, { error: "Falló la obtención de la racha de la meta" });
+  }
+}
+
 export async function goalStatistics(context: {
   id: string,
   user: Session["user"],
